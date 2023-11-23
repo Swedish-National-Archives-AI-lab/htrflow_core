@@ -3,7 +3,7 @@ name = "htrflow"
 version = "0.0.1.dev0"
 description = "short description of project."
 readme = "docs/README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 authors = [{ name = "Riksarkivet" }]
 license = { text = "MIT" }
 classifiers = [

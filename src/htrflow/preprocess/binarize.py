@@ -1,6 +1,7 @@
 import cv2
 
 
+# Refactor this into a preprocess class with multiple functions?
 class Preprocess:
     def __init__(self):
         pass
