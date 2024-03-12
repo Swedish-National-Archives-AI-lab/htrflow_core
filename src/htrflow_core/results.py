@@ -7,7 +7,6 @@ from htrflow_core import image
 from htrflow_core.utils.geometry import Bbox, Polygon
 
 
-@dataclass
 class Segment:
     """Segment class
 
@@ -22,16 +21,64 @@ class Segment:
     bbox: Bbox
     mask: Optional[np.ndarray]
     polygon: Polygon
-    score: Optional[float] = None
-    class_label: Optional[str] = None
+    score: Optional[float]
+    class_label: Optional[str]
     # baseline: list[tuple] ?
+
+    def __init__(
+        self,
+        bbox: Optional[Bbox] = None,
+        mask: Optional[np.ndarray] = None,
+        score: Optional[float] = None,
+        class_label: Optional[str] = None,
+    ):
+        """Initialize Segment
+
+        Initialize a segment from a either a mask or a bounding box,
+        or both.
+
+        Args:
+            bbox: The bounding box of the segment relative to the
+                input image. Defaults to None, in which case a
+                bounding box will be computed from the mask. Required
+                if mask is None.
+            mask: The mask of the segment, if available. The mask can
+                either be of the same shape as the input image or of
+                the same shape as the bounding box. It will be cropped
+                to match the size of the bounding box if needed.
+                Defaults to None. Required if bbox is None.
+            score: Segment confidence score. Defaults to None.
+            class_label: Segment class label. Defaults to None.
+
+        Raises:
+            ValueError: If both bbox and mask are None
+        """
+        if bbox is None and mask is None:
+            raise ValueError("Cannot instantiate Segment without bbox or mask")
+
+        if mask is not None:
+            polygon = image.mask2polygon(mask)
+            if not bbox:
+                bbox = image.mask2bbox(mask)
+
+            # Crop mask to bounding box if needed
+            x1, x2, y1, y2 = bbox
+            mask_h, mask_w = mask.shape[:2]
+            if mask_h != y2-y1 or mask_w != x2-x1:
+                mask = image.crop(mask, bbox)
+        else:
+            polygon = image.bbox2polygon(bbox)
+
+        self.mask = mask
+        self.bbox = bbox
+        self.polygon = polygon
+        self.score = score
+        self.class_label = class_label
 
     @classmethod
     def from_bbox(cls, bbox, **kwargs):
         """Create a segment from a bounding box"""
-        mask = None
-        polygon = image.bbox2polygon(bbox)
-        return cls(bbox, mask, polygon, **kwargs)
+        return cls(bbox=bbox, **kwargs)
 
     @classmethod
     def from_mask(cls, mask, **kwargs):
@@ -40,10 +87,7 @@ class Segment:
         Args:
             mask: A binary mask, of same shape as original image.
         """
-        bbox = image.mask2bbox(mask)
-        polygon = image.mask2polygon(mask)
-        cropped_mask = image.crop(mask, bbox)
-        return cls(bbox, cropped_mask, polygon, **kwargs)
+        return cls(mask=mask, **kwargs)
 
     @classmethod
     def from_baseline(cls, baseline, **kwargs):
