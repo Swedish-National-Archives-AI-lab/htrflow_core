@@ -141,8 +141,7 @@ class BaseDocumentNode(Node, ABC):
         return all(not child.is_leaf() for child in self.children)
 
     def segments(self):
-        for leaf in self.leaves():
-            yield leaf.image
+        return ImageGenerator(self.leaves())
 
     def is_region(self) -> bool:
         return bool(self.children) and not self.text
@@ -326,8 +325,7 @@ class Volume:
 
     def images(self):  # -> Generator[np.ndarray]:
         """Yields the volume's original input images"""
-        for page in self.pages:
-            yield page.image
+        return ImageGenerator(self.pages)
 
     def leaves(self):  # -> Iterable[BaseDocumentNode]:
         return chain.from_iterable(page.leaves() for page in self.pages)
@@ -342,15 +340,11 @@ class Volume:
             depth (int | None): Which depth segments to yield. Defaults to None, which
                 returns the leaf nodes (maximum depth).
         """
-
         if depth is None:
-            for node in self.leaves():
-                yield node.image
-        else:
-            for page in self.pages:
-                for node in page.traverse(lambda node: node.depth == depth):
-                    yield node.image
+            return ImageGenerator(self.leaves())
 
+        else:
+            ...
     def update(self, results: list[Result]) -> None:
         """
         Update the volume with model results
@@ -383,3 +377,17 @@ class Volume:
             format_: Output format
         """
         serialization.save_volume(self, format_, directory)
+
+
+
+class ImageGenerator:
+
+    def __init__(self, nodes):
+        self._nodes = list(nodes)
+
+    def __iter__(self):
+        for node in self._nodes:
+            yield node.image
+
+    def __len__(self):
+        return sum(1 for _ in self._nodes)
