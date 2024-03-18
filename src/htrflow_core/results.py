@@ -20,6 +20,7 @@ class Segment:
         score: Segment confidence score. Defaults to None.
         class_label: Segment class label. Defaults to None.
         polygon: An approximation of the segment mask, relative to the parent.
+        orig_shape: The shape of the input image.
     """  # noqa: E501
 
     bbox: Optional[Bbox] = None
@@ -27,6 +28,7 @@ class Segment:
     score: Optional[float] = None
     class_label: Optional[str] = None
     polygon: Polygon = field(init=False)
+    orig_shape: Optional[tuple[int, int]] = None
 
     def __post_init__(self):
         """Post-initialization to compute derived attributes like polygon from mask or bbox."""
@@ -64,6 +66,21 @@ class Segment:
     def from_baseline(cls, baseline, **kwargs):
         """Create a segment from a baseline"""
         raise NotImplementedError()
+
+    @property
+    def global_mask(self):
+        """The segment mask relative to the original input image"""
+        if self.mask is None:
+            return None
+        x1, x2, y1, y2 = self.bbox
+        mask = np.zeros(self.orig_shape, dtype=np.uint8)
+        mask[y1:y2, x1:x2] = self.mask
+        return mask
+
+    @property
+    def local_mask(self):
+        """The segment mask relative to the bounding box (alias for self.mask)"""
+        return self.mask
 
 
 @dataclass
@@ -106,6 +123,10 @@ class Result:
     metadata: dict
     segments: Sequence[Segment] = field(default_factory=list)
     texts: Sequence[RecognizedText] = field(default_factory=list)
+
+    def __post_init__(self):
+        for segment in self.segments:
+            segment.orig_shape = self.image.shape[:2]
 
     @property
     def bboxes(self) -> Sequence[Bbox]:
