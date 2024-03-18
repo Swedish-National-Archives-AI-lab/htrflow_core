@@ -32,6 +32,7 @@ class Segment:
 
     def __post_init__(self):
         """Post-initialization to compute derived attributes like polygon from mask or bbox."""
+
         if self.bbox is None and self.mask is None:
             raise ValueError("Cannot instantiate Segment without bbox or mask")
 
@@ -47,6 +48,8 @@ class Segment:
                 self.mask = imgproc.crop(self.mask, self.bbox)
         else:
             self.polygon = geometry.bbox2polygon(self.bbox)
+
+        self.bbox = Bbox(*self.bbox)
 
     @classmethod
     def from_bbox(cls, bbox: Bbox, **kwargs) -> "Segment":

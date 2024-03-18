@@ -3,6 +3,7 @@ Geometry utilities
 """
 
 from collections import namedtuple
+from dataclasses import dataclass, astuple
 from typing import Iterable, Sequence, TypeAlias
 
 import cv2
@@ -13,6 +14,48 @@ Point = namedtuple("Point", ["x", "y"])
 Bbox: TypeAlias = tuple[int, int, int, int]
 Polygon: TypeAlias = Sequence[Point] | Sequence[tuple[int, int]]
 Mask: TypeAlias = np.ndarray[np.uint8]
+
+
+@dataclass
+class Bbox:
+    x1: int
+    x2: int
+    y1: int
+    y2: int
+
+    @property
+    def height(self):
+        return self.y2 - self.y1
+
+    @property
+    def width(self):
+        return self.x2 - self.x1
+
+    @property
+    def xywh(self):
+        return self.x1, self.y1, self.width, self.height
+
+    @property
+    def xyxy(self):
+        return self.x1, self.y1, self.x2, self.y2
+
+    @property
+    def xxyy(self):
+        return self.x1, self.x2, self.y1, self.y2
+
+    @property
+    def p1(self):
+        return Point(self.x1, self.y1)
+
+    @property
+    def p2(self):
+        return Point(self.x2, self.y2)
+
+    def __iter__(self):
+        return iter(astuple(self))
+
+    def __getitem__(self, i):
+        return astuple(self)[i]
 
 
 def mask2polygon(mask: Mask, epsilon: float = 0.005) -> Polygon:

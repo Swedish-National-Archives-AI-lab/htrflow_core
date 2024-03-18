@@ -118,7 +118,7 @@ class BaseDocumentNode(Node, ABC):
         the original input image (root node of the tree).
         """
         x, y = self.coord
-        return (x, x + self.width, y, y + self.height)
+        return Bbox(x, x + self.width, y, y + self.height)
 
     @abstractmethod
     def add_text(self, recognized_text: RecognizedText):
@@ -169,8 +169,8 @@ class RegionNode(BaseDocumentNode):
         self.label = segment.class_label if segment.class_label else RegionNode.DEFAULT_LABEL
 
         x1, x2, y1, y2 = segment.bbox
-        self._height = y2 - y1
-        self._width = x2 - x1
+        self._height = segment.bbox.height
+        self._width = segment.bbox.width
         self._polygon = [(x + parent.coord.x, y + parent.coord.y) for x, y in segment.polygon]
         self._coord = Point(parent.coord.x + x1, parent.coord.y + y1)
         self._segment = segment
