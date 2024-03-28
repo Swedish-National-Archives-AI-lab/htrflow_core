@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 import json
 import os
-from typing import TYPE_CHECKING, Iterable, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Iterable, Sequence, Union
 
 import xmlschema
 from jinja2 import Environment, FileSystemLoader
@@ -41,6 +41,14 @@ class Serializer:
 
         Returns:
             A string"""
+
+    def serialize_volume(self, volume: Volume) -> Sequence[tuple[str, str]]:
+        outputs = []
+        for page in volume:
+            doc = self.serialize(page)
+            filename = os.path.join(volume.label, page.label + self.extension)
+            outputs.append((doc, filename))
+        return outputs
 
     def validate(self, doc: str):
         """Validate document"""
@@ -105,20 +113,26 @@ class Json(Serializer):
     extension = ".json"
     format_name = "json"
 
-    def __init__(self, include: Optional[Sequence[str]] = None):
+    def __init__(self, one_file=False):
         """Initialize JSON serializer
 
         Args:
-            include: A list of attributes to include in the output JSON.
-                If left as None, a default list of attributes is used,
-                see `node2dict`.
+            one_file: Export all pages of the volume to the same file.
+                Defaults to False.
         """
-        self.include = include
+        self.one_file = one_file
 
     def serialize(self, page: PageNode):
         def _serialize(obj):
             return {k: v for k, v in obj.__dict__.items() if k not in ["mask", "_image", "parent"]}
         return json.dumps(page.asdict(), default=_serialize, indent=4)
+
+    def serialize_volume(self, volume: Volume):
+        if self.one_file:
+            filename = volume.label + self.extension
+            doc = self.serialize(volume)
+            return [(doc, filename)]
+        return super().serialize_volume(volume)
 
 
 class PlainText(Serializer):
@@ -178,16 +192,9 @@ def save_volume(volume: Volume, serializer: str | Serializer, dest: str) -> Iter
     if isinstance(serializer, str):
         serializer = _get_serializer(serializer)
 
-    dest = os.path.join(dest, volume.label)
-    os.makedirs(dest, exist_ok=True)
-
-    for page in volume:
-        if not page.contains_text():
-            raise ValueError(f"Cannot serialize page without text: {page.label}")
-
-        doc = serializer.serialize(page)
-        filename = os.path.join(dest, page.label + serializer.extension)
-
+    for doc, filename in serializer.serialize_volume(volume):
+        filename = os.path.join(dest, filename)
+        os.makedirs(os.path.dirname(filename), exist_ok=True)
         with open(filename, "w") as f:
             f.write(doc)
 
