@@ -7,7 +7,7 @@ from mmengine.structures import InstanceData
 
 from htrflow_core.models.base_model import BaseModel
 from htrflow_core.models.enums import Framework, Task
-from htrflow_core.models.hf_utils import MMLabsDownloader
+from htrflow_core.models.hf_utils import load_mmlabs
 from htrflow_core.models.mixins.torch_mixin import PytorchMixin
 from htrflow_core.models.openmmlab.utils import SuppressOutput
 from htrflow_core.postprocess.mask_nms import multiclass_mask_nms
@@ -28,7 +28,7 @@ class RTMDet(BaseModel, PytorchMixin):
     ) -> None:
         super().__init__(**kwargs)
 
-        model_weights, model_config = MMLabsDownloader.from_pretrained(model, config)
+        model_weights, model_config = load_mmlabs(model, config)
 
         with SuppressOutput():
             self.model = DetInferencer(
